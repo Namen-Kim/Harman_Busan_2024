@@ -19,10 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "myLib.h"
+//#include "C:\Users\SAMSUNG\STM32CubeIDE\workspace_1.15.0\common\myLib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -41,9 +40,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-
-TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart2;
 
@@ -55,8 +53,8 @@ UART_HandleTypeDef huart2;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_TIM3_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -69,45 +67,25 @@ int __io_putchar(int ch)
 	return ch;
 }
 
-int GetADCValue()
+int GetAdcValue()
 {
+	/*
 	HAL_ADC_Start(&hadc1);
 	HAL_ADC_PollForConversion(&hadc1, 10);
 	return HAL_ADC_GetValue(&hadc1);
-}
-
-int ox=0, oy=0;
-void ScreenPos()
-{
-	  int r1 = GetADCValue();
-	  int r2 = GetADCValue();
-	  //HAL_ADC_Stop(&hadc1);
-
-	  int x = 80 * r1 / 4096;
-	  int y = 20 * r2 / 4096;
-
-	  printf("\033[%d;%dH  \r\n",oy ,ox);
-	  printf("\033[%d;%dH *\r\n",y ,x);
-	  ox=x; oy=y;
+	*/
 }
 
 void ProgramStart()
 {
-	 printf("\033[2J");	// screen clear
-	 printf("\033[1;1H");	// Move cursor pos to (1,1)
-	 printf("Program Started....Press Blue button to continue\r\n");
-	 while(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin));  // (B1 == 0) if pressed
-	 printf("\033[2J");	// screen clear
+	printf("\033[2J");	// screen clear
+	printf("\033[1;1H");	// Move cursor pos to (1,1)
+	printf("Program Started....Press Blue button to continue\r\n");
+	while(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin));  // (B1 == 0) if pressed
+	printf("\033[2J");	// screen clear
 }
 
 
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	int r1 = GetADCValue();
-	int r2 = GetADCValue();
-	printf("\033[10;20H ADC_CH0 : %-4d\r\n", r1);
-	printf("\033[10;20H ADC_CH0 : %-4d\r\n", r2);
-}
 /* USER CODE END 0 */
 
 /**
@@ -140,20 +118,29 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
-  MX_ADC1_Init();
-  MX_TIM3_Init();
+  MX_TIM1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-  void ProgramStart();
+  ProgramStart();
+
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_TIM_Base_Start_IT(&htim3);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  for(int i=0; i<990; i++)
+	  {
+		  htim1.Instance->CCR1 = i;
+		  htim1.Instance->CCR2 = 990-i;
+		  HAL_Delay(1);
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -205,109 +192,130 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC1 Initialization Function
+  * @brief TIM1 Initialization Function
   * @param None
   * @retval None
   */
-static void MX_ADC1_Init(void)
+static void MX_TIM1_Init(void)
 {
 
-  /* USER CODE BEGIN ADC1_Init 0 */
+  /* USER CODE BEGIN TIM1_Init 0 */
 
-  /* USER CODE END ADC1_Init 0 */
-
-  ADC_ChannelConfTypeDef sConfig = {0};
-
-  /* USER CODE BEGIN ADC1_Init 1 */
-
-  /* USER CODE END ADC1_Init 1 */
-
-  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
-  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = ENABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = ENABLE;
-  hadc1.Init.NbrOfDiscConversion = 1;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 2;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
-  if (HAL_ADC_Init(&hadc1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_0;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
-  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
-  */
-  sConfig.Channel = ADC_CHANNEL_1;
-  sConfig.Rank = 2;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN ADC1_Init 2 */
-
-  /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
+  /* USER CODE END TIM1_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
-  /* USER CODE BEGIN TIM3_Init 1 */
+  /* USER CODE BEGIN TIM1_Init 1 */
 
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 8400-1;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 10000-1;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 84-1;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 1000-1;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM3_Init 2 */
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
 
-  /* USER CODE END TIM3_Init 2 */
+  /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 4294967295;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
 
 }
 

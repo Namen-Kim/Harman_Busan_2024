@@ -19,10 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "myLib.h"
+#include "C:\Users\SAMSUNG\STM32CubeIDE\workspace_1.15.0\common\myLib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -43,8 +42,6 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
-TIM_HandleTypeDef htim3;
-
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -56,57 +53,19 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
-static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar(int ch)
+int cn = 0;  // channel number
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-	HAL_UART_Transmit(&huart2, &ch, 1, 10);
-	return ch;
-}
-
-int GetADCValue()
-{
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, 10);
-	return HAL_ADC_GetValue(&hadc1);
-}
-
-int ox=0, oy=0;
-void ScreenPos()
-{
-	  int r1 = GetADCValue();
-	  int r2 = GetADCValue();
-	  //HAL_ADC_Stop(&hadc1);
-
-	  int x = 80 * r1 / 4096;
-	  int y = 20 * r2 / 4096;
-
-	  printf("\033[%d;%dH  \r\n",oy ,ox);
-	  printf("\033[%d;%dH *\r\n",y ,x);
-	  ox=x; oy=y;
-}
-
-void ProgramStart()
-{
-	 printf("\033[2J");	// screen clear
-	 printf("\033[1;1H");	// Move cursor pos to (1,1)
-	 printf("Program Started....Press Blue button to continue\r\n");
-	 while(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin));  // (B1 == 0) if pressed
-	 printf("\033[2J");	// screen clear
-}
-
-
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	int r1 = GetADCValue();
-	int r2 = GetADCValue();
-	printf("\033[10;20H ADC_CH0 : %-4d\r\n", r1);
-	printf("\033[10;20H ADC_CH0 : %-4d\r\n", r2);
+	int v1 = HAL_ADC_GetValue(&hadc1);
+	printf("ADC Input(%d) : %d\r\n", cn, v1);
+	if(++cn > 1) cn = 0;
+	HAL_ADC_Start_IT(&hadc1);  // next
 }
 /* USER CODE END 0 */
 
@@ -141,19 +100,23 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_ADC1_Init();
-  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
-  void ProgramStart();
+  ProgramStart();
+
+  HAL_ADC_Start_IT(&hadc1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_TIM_Base_Start_IT(&htim3);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+		if(HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == 0)
+			HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+		else
+	 		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
   }
   /* USER CODE END 3 */
 }
@@ -263,51 +226,6 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
-
-}
-
-/**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 8400-1;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 10000-1;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
 
 }
 
