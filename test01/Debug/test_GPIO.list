@@ -1,5 +1,5 @@
 
-test01.elf:     file format elf32-littlearm
+test_GPIO.elf:     file format elf32-littlearm
 
 Sections:
 Idx Name          Size      VMA       LMA       File off  Algn
