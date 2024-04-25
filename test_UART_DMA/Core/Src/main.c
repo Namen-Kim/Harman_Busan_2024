@@ -169,7 +169,10 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if(GetBuffer(bb))printf("%s\r\n", bb);
+	  if(GetBuffer(bb)){
+		  Outs(bb);
+		  /*printf("%s\r\n", bb);*/
+	  }
 	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
