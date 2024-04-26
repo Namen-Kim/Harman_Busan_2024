@@ -69,15 +69,19 @@ void Error_Handler(void);
 #define ECHO_GPIO_Port GPIOA
 #define TRIG_Pin GPIO_PIN_7
 #define TRIG_GPIO_Port GPIOA
+#define D2_Pin GPIO_PIN_10
+#define D2_GPIO_Port GPIOA
 #define TMS_Pin GPIO_PIN_13
 #define TMS_GPIO_Port GPIOA
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
-#define SWO_Pin GPIO_PIN_3
-#define SWO_GPIO_Port GPIOB
-#define B4_Pin GPIO_PIN_4
-#define B4_GPIO_Port GPIOB
-#define B4_EXTI_IRQn EXTI4_IRQn
+#define D3_Pin GPIO_PIN_3
+#define D3_GPIO_Port GPIOB
+#define D5_Pin GPIO_PIN_4
+#define D5_GPIO_Port GPIOB
+#define D5_EXTI_IRQn EXTI4_IRQn
+#define D4_Pin GPIO_PIN_5
+#define D4_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

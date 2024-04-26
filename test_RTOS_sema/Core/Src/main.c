@@ -68,25 +68,45 @@ void StartTask03(void const * argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int IsHolding = 0;
+int IsHold = 1;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if(GPIO_Pin == B4_Pin)
+	if(GPIO_Pin == D5_Pin)
 	{
-		if(IsHolding)
-		{
-			while(osSemaphoreWait(myBinarySem01Handle, 10) != osOK);
-			IsHolding = 1;
-			Outs("Semaphore Holded\r");
-		}
-		else
-		{
-			osSemaphoreRelease(myBinarySem01Handle);
-			IsHolding = 0;
-			Outs("Semaphore Released\r");
-		}
+		IsHold = !IsHold;
+		if(IsHold) osSemaphoreRelease(myBinarySem01Handle);
 	}
+
 }
+
+void usDelay(int us)
+{
+	volatile uint32_t t1 = htim2.Instance->CNT;
+	while(htim2.Instance->CNT - t1 < us);
+}
+
+double usDist()
+{
+	  HAL_GPIO_WritePin(TRIG_GPIO_Port, TRIG_Pin, 0);
+	  usDelay(10);
+	  HAL_GPIO_WritePin(TRIG_GPIO_Port, TRIG_Pin, 1);
+	  usDelay(10);
+	  HAL_GPIO_WritePin(TRIG_GPIO_Port, TRIG_Pin, 0);
+	  /*Wait for burst*/
+	  usDelay(200);
+	  /*Wait for Echo Low*/
+	  while(HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin) != 1);
+	  /*Start count*/
+	  volatile uint32_t t1 = htim2.Instance->CNT;
+	  /*Wait for Echo Low*/
+	  while(HAL_GPIO_ReadPin(ECHO_GPIO_Port, ECHO_Pin) != 0);
+	  volatile uint32_t t2 = htim2.Instance->CNT;
+	  int dt = t2 - t1;
+	  double Dist = 0.000170 * dt;
+	  usDelay(60000);
+	  return Dist;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -121,7 +141,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  ProgramStart();
 
+  HAL_TIM_Base_Start(&htim2);
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -151,11 +173,11 @@ int main(void)
   myTask01Handle = osThreadCreate(osThread(myTask01), NULL);
 
   /* definition and creation of myTask02 */
-  osThreadDef(myTask02, StartTask02, osPriorityLow, 0, 128);
+  osThreadDef(myTask02, StartTask02, osPriorityBelowNormal, 0, 128);
   myTask02Handle = osThreadCreate(osThread(myTask02), NULL);
 
   /* definition and creation of myTask03 */
-  osThreadDef(myTask03, StartTask03, osPriorityIdle, 0, 128);
+  osThreadDef(myTask03, StartTask03, osPriorityLow, 0, 128);
   myTask03Handle = osThreadCreate(osThread(myTask03), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -174,10 +196,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  /*
-	  HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-	  HAL_Delay(500);
-	  */
   }
   /* USER CODE END 3 */
 }
@@ -324,10 +342,10 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|TRIG_Pin|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, LD2_Pin|TRIG_Pin|D2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, D3_Pin|D4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -335,8 +353,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin TRIG_Pin PA8 PA9 */
-  GPIO_InitStruct.Pin = LD2_Pin|TRIG_Pin|GPIO_PIN_8|GPIO_PIN_9;
+  /*Configure GPIO pins : LD2_Pin TRIG_Pin D2_Pin */
+  GPIO_InitStruct.Pin = LD2_Pin|TRIG_Pin|D2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -348,18 +366,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(ECHO_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  /*Configure GPIO pins : D3_Pin D4_Pin */
+  GPIO_InitStruct.Pin = D3_Pin|D4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : B4_Pin */
-  GPIO_InitStruct.Pin = B4_Pin;
+  /*Configure GPIO pin : D5_Pin */
+  GPIO_InitStruct.Pin = D5_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B4_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(D5_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);
@@ -379,21 +397,33 @@ static void MX_GPIO_Init(void)
   * @param  argument: Not used
   * @retval None
   */
-int tn1 = 0;
+double Dist;
+double end_value;
+int mt, cm;
 /* USER CODE END Header_StartTask01 */
 void StartTask01(void const * argument)
 {
   /* USER CODE BEGIN 5 */
+	int tn = 0;
   /* Infinite loop */
   for(;;)
   {
 	  if(osSemaphoreWait(myBinarySem01Handle, 0) == osOK)
 	  {
-		  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-		  printf("Process in Task01 : %d\r\n",tn1++);
-		  osSemaphoreRelease(myBinarySem01Handle);
+		  for(int i=0; i<5; i++)
+		  {
+		  	  Dist += usDist();
+		  }
+		  end_value = Dist/5;
+		  /*
+		  HAL_GPIO_TogglePin(D2_GPIO_Port, D2_Pin);
+		  HAL_Delay(200);
+		  printf("Task01 process : %d\r\n", tn++);
+		  */
+
+		  if(IsHold) osSemaphoreRelease(myBinarySem01Handle);
 	  }
-	  osDelay(300);
+    osDelay(1);
   }
   /* USER CODE END 5 */
 }
@@ -404,26 +434,41 @@ void StartTask01(void const * argument)
 * @param argument: Not used
 * @retval None
 */
-int tn2 = 0;
-char i2=1;
 /* USER CODE END Header_StartTask02 */
 void StartTask02(void const * argument)
 {
   /* USER CODE BEGIN StartTask02 */
+	//int tn2 = 0;
+	char dum[100];
   /* Infinite loop */
   for(;;)
   {
 	  if(osSemaphoreWait(myBinarySem01Handle, 0) == osOK)
 	  {
-		  if(i2){
-			  osDelay(100);
-			  i2=0;
+
+		  mt = (int)end_value;
+		  cm = (end_value*100) - (mt*100);
+		  //printf("%d\r\n",end_value);
+		  Outs("\033[10;30H");
+		  /*
+		  if(mt) printf("Distance : %dm %dcm\r\n", mt, cm);
+		  else printf("Distance : %dcm\r\n", cm);
+		  */
+
+		  if(mt){
+			  sprintf(dum,"Distance : %3dm%2dcm\r\n", mt, cm);
+			  Outs(dum);
 		  }
-		  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_9);
-		  printf("Process in Task02 : %d\r\n",tn2++);
-		  osSemaphoreRelease(myBinarySem01Handle);
+		  else{
+			  sprintf(dum,"Distance : %6dcm\r\n", cm);
+			  Outs(dum);
+		  }
+
+		  Dist = 0;
+
+		  if(IsHold) osSemaphoreRelease(myBinarySem01Handle);
 	  }
-    osDelay(300);
+    osDelay(1);
   }
   /* USER CODE END StartTask02 */
 }
@@ -434,27 +479,42 @@ void StartTask02(void const * argument)
 * @param argument: Not used
 * @retval None
 */
-int tn3 = 0;
-char i3=1;
 /* USER CODE END Header_StartTask03 */
 void StartTask03(void const * argument)
 {
   /* USER CODE BEGIN StartTask03 */
+	//int tn3 = 0;
   /* Infinite loop */
   for(;;)
   {
-	  if(osSemaphoreWait(myBinarySem01Handle, 0) == osOK){
-		  if(i3){
-			  osDelay(200);
-			  i3=0;
+
+	  if(osSemaphoreWait(myBinarySem01Handle, 0) == osOK)
+	  {
+		  /*
+		  HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
+		  HAL_Delay(200);
+		  printf("Task03 process : %d\r\n", tn3++);
+		  */
+		HAL_GPIO_WritePin(D2_GPIO_Port, D2_Pin, 0);
+		HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 0);
+		HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 0);
+		  if(cm < 30 && mt ==0)
+		  {
+			  HAL_GPIO_TogglePin(D2_GPIO_Port, D2_Pin);
+		  }
+		  else if(cm <50 && mt ==0)
+		  {
+			  HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
+		  }
+		  else
+		  {
+			  HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
 		  }
 
-		  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_10);
-		  printf("Process in Task03 : %d\r\n",tn3++);
-		  osSemaphoreRelease(myBinarySem01Handle);
+		  if(IsHold) osSemaphoreRelease(myBinarySem01Handle);
 	  }
-	  osDelay(300);
 
+    osDelay(1);
   }
   /* USER CODE END StartTask03 */
 }
